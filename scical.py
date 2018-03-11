@@ -1,5 +1,11 @@
 #! /usr/bin/env python
 
+"""
+Input a calculator expression string or a RPN, output the result.
+
+Todo: Verify the string and the RPN.
+"""
+
 import re
 import itertools
 from operator import add, sub, mul, truediv
@@ -10,6 +16,8 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %
 
 
 class Calculator:
+    """ Calculator class calculating both calculator expression strings and RPN's """
+
     operator = [
         ('+', 'ADD', add, 'L2R'),
         ('-', 'SUB', sub, 'L2R'),
@@ -40,6 +48,7 @@ class Calculator:
         self.rpn = None
 
     def from_expr(self, expr):
+        """ Input a calculator string expression. Return the calculation result. """
         split_expr = re.findall(r'[\d.]+|[{}]'
                                 .format(''.join(['\\'+token for token in self._token_type])), expr)
         self._tokens = [(self._token_type.get(x, 'NUM'), x) for x in split_expr]
@@ -48,6 +57,7 @@ class Calculator:
         return self._to_result()
 
     def from_rpn(self, rpn_string):
+        """ Input a RPN string, separated by space. Return the calculation result. """
         rpn = re.findall(r'[\d.]+|[{}]'
                          .format(''.join(['\\'+token for token in self._token_type])), rpn_string)
         self.rpn = [(self._token_type.get(value, 'NUM'), value) for value in rpn]
@@ -55,7 +65,9 @@ class Calculator:
         return self._to_result()
 
     def _to_result(self):
+        """ Convert computer-readble RPN to calculation result """
         def operate_rpn(rpn):
+            """ A recursion function to calculate the RPN. """
             if len(rpn) == 1:
                 return rpn[0]
             for i, item in enumerate(rpn):
@@ -70,9 +82,11 @@ class Calculator:
         return operate_rpn(self.rpn)[1]
 
     def _to_rpn(self):
+        """ Convert list of tokens to a computer-readable RPN """
         tokens = self._tokens
 
         def find_matching_brackets(input_bracket):
+            """ Input a bracket and detect the bracket pair in the list of tokens. """
             to_find = None
             for bracket_pair in self.brackets:
                 if input_bracket in bracket_pair:
@@ -93,6 +107,7 @@ class Calculator:
         bracket_level = 0
 
         def purge():
+            """ Purge the operation stack to the number stack """
             nonlocal op_stack
 
             for operation in op_stack[bracket_level][::-1]:
@@ -100,24 +115,26 @@ class Calculator:
             op_stack[bracket_level] = []
 
         def purge_on_rule_violation(token):
+            """ Detects whether BODMAS has be violated. If so, purge the RPN. """
             logging.debug('Rule violation, purging...')
 
-            def get_rule_seq():
+            def get_rule_seq(token):
+                """ Return the sequence of operation according to BODMAS. """
                 for i, item in enumerate(self.rule_sequence):
                     if token[0] in item[1]:
                         return i
                 return -1
 
-            nonlocal min_rule
+            nonlocal min_rule  # The previous order of operations.
 
             if min_rule is not None:
-                if get_rule_seq() > min_rule:
+                if get_rule_seq(token) > min_rule:
                     purge()
                     min_rule = None
                 else:
-                    min_rule = get_rule_seq()
+                    min_rule = get_rule_seq(token)
             else:
-                min_rule = get_rule_seq()
+                min_rule = get_rule_seq(token)
 
         pair_bracket = None
 
@@ -144,25 +161,30 @@ class Calculator:
                 purge_on_rule_violation(token)
                 op_stack[bracket_level].append(token)
                 logging.debug('Op_stack: %s', op_stack)
-        purge()
+
+        purge()  # Finalizing purge so that everything is outputted.
 
         return num_stack
 
     def to_rpn(self):
+        """ Outputs a human readable RPN """
         return [token[1] for token in self._to_rpn()]
 
 
 def parse(expr):
+    """ Short hand to parse calculator string expression """
     calculator = Calculator()
     return calculator.from_expr(expr)
 
 
 def parse_rpn(rpn_string):
+    """ Short hand to parse RPN """
     calculator = Calculator()
     return calculator.from_rpn(rpn_string)
 
 
 def main():
+    """ Main function """
     formula = '162 / (2 + 1 ) ^4'
     calculator = Calculator()
     print(calculator.from_expr(formula))
