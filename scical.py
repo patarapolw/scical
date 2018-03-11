@@ -36,6 +36,8 @@ class Calculator:
     def __init__(self):
         self._token_type = dict((key, val) for key, val, op, direction in self.operator)
         self._token_type.update([(bracket, 'PAR') for bracket in itertools.chain(*self.brackets)])
+        self._tokens = None
+        self.rpn = None
 
     def from_expr(self, expr):
         split_expr = re.findall(r'[\d.]+|[{}]'
@@ -57,11 +59,10 @@ class Calculator:
             if len(rpn) == 1:
                 return rpn[0]
             for i, item in enumerate(rpn):
-                rpn_type, value = item
-                for key, token_type, op, direction in self.operator:
-                    if rpn_type == token_type:
+                for _, token_type, operation, _ in self.operator:
+                    if item[0] == token_type:
                         new_rpn = rpn[:i-2] \
-                                  + [('NUM', op(float(rpn[i-2][1]), float(rpn[i-1][1])))] \
+                                  + [('NUM', operation(float(rpn[i-2][1]), float(rpn[i-1][1])))] \
                                   + rpn[i+1:]
                         return operate_rpn(new_rpn)
             return rpn[0]
@@ -94,8 +95,8 @@ class Calculator:
         def purge():
             nonlocal op_stack
 
-            for op in op_stack[bracket_level][::-1]:
-                num_stack.append(op)
+            for operation in op_stack[bracket_level][::-1]:
+                num_stack.append(operation)
             op_stack[bracket_level] = []
 
         def purge_on_rule_violation(token):
@@ -120,7 +121,7 @@ class Calculator:
 
         pair_bracket = None
 
-        logging.debug('Bracket level: ' + str(bracket_level))
+        logging.debug('Bracket level: %s', bracket_level)
         for token in tokens:
             if pair_bracket == token:
                 purge()
@@ -128,21 +129,21 @@ class Calculator:
                 op_stack = op_stack[:-1]
                 bracket_level -= 1
                 logging.debug('Found closing bracket, purging...')
-                logging.debug('Op_stack:' + repr(op_stack))
-                logging.debug('Bracket level: ' + str(bracket_level))
+                logging.debug('Op_stack: %s', op_stack)
+                logging.debug('Bracket level: %s', bracket_level)
             elif token[0] == 'NUM':
                 num_stack.append(token)
-                logging.debug('Num_stack:' + repr(num_stack))
+                logging.debug('Num_stack: %s', num_stack)
             elif token[0] == 'PAR':
                 pair_bracket = find_matching_brackets(token[1])
                 op_stack.append([])
                 bracket_level += 1
                 logging.debug('Found opening bracket')
-                logging.debug('Bracket level: ' + str(bracket_level))
+                logging.debug('Bracket level: %s', bracket_level)
             else:
                 purge_on_rule_violation(token)
                 op_stack[bracket_level].append(token)
-                logging.debug('Op_stack:' + repr(op_stack))
+                logging.debug('Op_stack: %s', op_stack)
         purge()
 
         return num_stack
