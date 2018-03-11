@@ -1,6 +1,8 @@
+#! /usr/bin/env python
+
 import re
 import itertools
-from operator import add, sub, mul, truediv, pow
+from operator import add, sub, mul, truediv
 
 import logging
 
@@ -8,42 +10,44 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %
 
 
 class Calculator:
+    operator = [
+        ('+', 'ADD', add, 'L2R'),
+        ('-', 'SUB', sub, 'L2R'),
+        ('*', 'MUL', mul, 'L2R'),
+        ('/', 'DIV', truediv, 'R2L'),
+        ('^', 'EXP', pow, 'R2L')
+    ]
+
+    brackets = [
+        ('(', ')'),
+        ('[', ']'),
+        ('{', '}')
+    ]
+
+    rule_sequence = [
+        ('X', ['EXP']),
+        # B
+        # O
+        ('D', ['DIV']),
+        ('M', ['MUL']),
+        ('AS', ['ADD', 'SUB']),
+    ]
+
     def __init__(self):
-        self.operator = [
-            ('+', 'ADD', add, 'L2R'),
-            ('-', 'SUB', sub, 'L2R'),
-            ('*', 'MUL', mul, 'L2R'),
-            ('/', 'DIV', truediv, 'R2L'),
-            ('^', 'EXP', pow, 'R2L')
-        ]
-
-        self.brackets = [
-            ('(', ')'),
-            ('[', ']'),
-            ('{', '}')
-        ]
-
-        self.rule_sequence = [
-            ('X', ['EXP']),
-            # B
-            # O
-            ('D', ['DIV']),
-            ('M', ['MUL']),
-            ('AS', ['ADD', 'SUB']),
-        ]
-
         self._token_type = dict((key, val) for key, val, op, direction in self.operator)
         self._token_type.update([(bracket, 'PAR') for bracket in itertools.chain(*self.brackets)])
 
     def from_expr(self, expr):
-        split_expr = re.findall(r'[\d.]+|[{}]'.format(''.join(['\\'+token for token in self._token_type])), expr)
+        split_expr = re.findall(r'[\d.]+|[{}]'
+                                .format(''.join(['\\'+token for token in self._token_type])), expr)
         self._tokens = [(self._token_type.get(x, 'NUM'), x) for x in split_expr]
         self.rpn = self._to_rpn()
 
         return self._to_result()
 
     def from_rpn(self, rpn_string):
-        rpn = re.findall(r'[\d.]+|[{}]'.format(''.join(['\\'+token for token in self._token_type])), rpn_string)
+        rpn = re.findall(r'[\d.]+|[{}]'
+                         .format(''.join(['\\'+token for token in self._token_type])), rpn_string)
         self.rpn = [(self._token_type.get(value, 'NUM'), value) for value in rpn]
 
         return self._to_result()
