@@ -3,13 +3,14 @@
 """
 Input a calculator expression string or a RPN, output the result.
 
-Todo: Verify the string and the RPN.
+Todo:
+ - Verify the string and the RPN.
+ - Compile R2L versus L2R operators
 """
 
 import re
 import itertools
 from operator import add, sub, mul, truediv
-
 import logging
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -65,7 +66,7 @@ class Calculator:
         return self._to_result()
 
     def _to_result(self):
-        """ Convert computer-readble RPN to calculation result """
+        """ Convert computer-readable RPN to calculation result """
         def operate_rpn(rpn):
             """ A recursion function to calculate the RPN. """
             if len(rpn) == 1:
@@ -85,6 +86,15 @@ class Calculator:
         """ Convert list of tokens to a computer-readable RPN """
         tokens = self._tokens
 
+        # Number stack and operator stack according to Shunting-yard algorithm.
+        num_stack = []  # Number stack
+        op_stack = [[]]  # Operator stack also allows multiple bracket levels. --> 2D array
+        bracket_level = 0  # Depth of the brackets
+        min_rule = None  # Current order of operations according to BODMAS.
+        pair_bracket = []
+            # Array of tokens containing the matching pair, in case inside the bracket.
+            # Depth of the array corresponds with 'bracket level'
+
         def find_matching_brackets(input_bracket):
             """ Input a bracket and detect the bracket pair in the list of tokens. """
             to_find = None
@@ -100,11 +110,6 @@ class Calculator:
                 if token[1] == to_find:
                     return token
             return None
-
-        num_stack = []
-        op_stack = [[]]
-        min_rule = None
-        bracket_level = 0
 
         def purge():
             """ Purge the operation stack to the number stack """
@@ -136,13 +141,13 @@ class Calculator:
             else:
                 min_rule = get_rule_seq(token)
 
-        pair_bracket = None
+        # Main function
 
         logging.debug('Bracket level: %s', bracket_level)
         for token in tokens:
-            if pair_bracket == token:
+            if bracket_level > 0 and pair_bracket[bracket_level-1] == token:
                 purge()
-                pair_bracket = None
+                pair_bracket[bracket_level-1] = None
                 op_stack = op_stack[:-1]
                 bracket_level -= 1
                 logging.debug('Found closing bracket, purging...')
@@ -152,9 +157,9 @@ class Calculator:
                 num_stack.append(token)
                 logging.debug('Num_stack: %s', num_stack)
             elif token[0] == 'PAR':
-                pair_bracket = find_matching_brackets(token[1])
-                op_stack.append([])
                 bracket_level += 1
+                pair_bracket.append(find_matching_brackets(token[1]))
+                op_stack.append([])
                 logging.debug('Found opening bracket')
                 logging.debug('Bracket level: %s', bracket_level)
             else:
