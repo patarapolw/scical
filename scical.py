@@ -10,11 +10,11 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %
 class Calculator:
     def __init__(self):
         self.operator = [
-            ('+', 'ADD', add),
-            ('-', 'SUB', sub),
-            ('*', 'MUL', mul),
-            ('/', 'DIV', truediv),
-            ('^', 'EXP', pow)
+            ('+', 'ADD', add, 'L2R'),
+            ('-', 'SUB', sub, 'L2R'),
+            ('*', 'MUL', mul, 'L2R'),
+            ('/', 'DIV', truediv, 'R2L'),
+            ('^', 'EXP', pow, 'R2L')
         ]
 
         self.brackets = [
@@ -32,30 +32,30 @@ class Calculator:
             ('AS', ['ADD', 'SUB']),
         ]
 
-        self._token_type = dict((key, val) for key, val, op in self.operator)
+        self._token_type = dict((key, val) for key, val, op, direction in self.operator)
         self._token_type.update([(bracket, 'PAR') for bracket in itertools.chain(*self.brackets)])
 
     def from_expr(self, expr):
-        split_expr = re.findall('[\d.]+|[{}]'.format(''.join(['\\'+token for token in self._token_type])), expr)
+        split_expr = re.findall(r'[\d.]+|[{}]'.format(''.join(['\\'+token for token in self._token_type])), expr)
         self._tokens = [(self._token_type.get(x, 'NUM'), x) for x in split_expr]
         self.rpn = self._to_rpn()
 
-        return self.result()
+        return self._to_result()
 
     def from_rpn(self, rpn_string):
-        rpn = re.findall('[\d.]+|[{}]'.format(''.join(['\\'+token for token in self._token_type])), rpn_string)
+        rpn = re.findall(r'[\d.]+|[{}]'.format(''.join(['\\'+token for token in self._token_type])), rpn_string)
         self.rpn = [(self._token_type.get(value, 'NUM'), value) for value in rpn]
 
-        return self.result()
+        return self._to_result()
 
-    def result(self):
+    def _to_result(self):
         def operate_rpn(rpn):
             if len(rpn) == 1:
                 return rpn[0]
             for i, item in enumerate(rpn):
-                type, value = item
-                for key, token, op in self.operator:
-                    if type == token:
+                rpn_type, value = item
+                for key, token_type, op, direction in self.operator:
+                    if rpn_type == token_type:
                         new_rpn = rpn[:i-2] \
                                   + [('NUM', op(float(rpn[i-2][1]), float(rpn[i-1][1])))] \
                                   + rpn[i+1:]
@@ -65,7 +65,6 @@ class Calculator:
 
     def _to_rpn(self):
         tokens = self._tokens
-        all_brackets = list(itertools.chain(*self.brackets))
 
         def find_matching_brackets(input_bracket):
             to_find = None
@@ -96,6 +95,7 @@ class Calculator:
 
         def purge_on_rule_violation(token):
             logging.debug('Rule violation, purging...')
+
             def get_rule_seq():
                 for i, item in enumerate(self.rule_sequence):
                     if token[0] in item[1]:
@@ -159,5 +159,4 @@ def parse_rpn(rpn_string):
 if __name__ == '__main__':
     formula = '162 / (2 + 1 ) ^4'
     cal = Calculator()
-    cal.from_expr(formula)
-    print(cal.result())
+    print(cal.from_expr(formula))
