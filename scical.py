@@ -64,6 +64,7 @@ class Calculator:
                                   + [('NUM', op(float(rpn[i-2][1]), float(rpn[i-1][1])))] \
                                   + rpn[i+1:]
                         return operate_rpn(new_rpn)
+            return rpn[0]
 
         return operate_rpn(self.rpn)[1]
 
@@ -160,7 +161,11 @@ def parse_rpn(rpn_string):
     return calculator.from_rpn(rpn_string)
 
 
-if __name__ == '__main__':
+def main():
     formula = '162 / (2 + 1 ) ^4'
-    cal = Calculator()
-    print(cal.from_expr(formula))
+    calculator = Calculator()
+    print(calculator.from_expr(formula))
+
+
+if __name__ == '__main__':
+    main()
